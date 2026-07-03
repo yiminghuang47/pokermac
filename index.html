@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pokermac</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0; font:17px/1.45 Arial, Helvetica, sans-serif;
+    background:#fff; color:#111; display:flex; flex-direction:column;
+    align-items:center; min-height:100vh;
+  }
+  #app{width:100%; max-width:640px; padding:20px}
+  .topbar{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid #ccc; padding-bottom:10px; margin-bottom:36px;
+    font-size:17px; color:#444;
+  }
+  .topbar b{font-size:24px; color:#111; font-variant-numeric:tabular-nums}
+  .rows{display:flex; flex-direction:column; gap:20px; align-items:center}
+  .seat{display:flex; flex-direction:column; align-items:center; gap:6px}
+  .seat .who{font-size:14px; color:#888}
+  .row{display:flex; gap:8px}
+  .card{
+    width:58px; height:80px; background:#fff; border:1px solid #bbb; border-radius:5px;
+    display:flex; align-items:center; justify-content:center; position:relative;
+    font-weight:700; line-height:1;
+  }
+  .card .corner{position:absolute; top:4px; left:5px; font-size:17px; font-weight:700}
+  .card .pip{font-size:38px; line-height:1}
+  .card.s0{color:#111}    /* spades black */
+  .card.s1{color:#d1364a} /* hearts red */
+  .card.s2{color:#2b7fff} /* diamonds blue */
+  .card.s3{color:#1a9e5a} /* clubs green */
+  .card.slot{border:1px dashed #ccc; color:#bbb; font-size:13px; font-weight:400}
+  .prompt{margin:34px 0 12px; text-align:center; font-size:20px; color:#333}
+  .answer{display:flex; gap:10px; justify-content:center; align-items:center}
+  input#outs{
+    width:110px; font:inherit; font-size:28px; text-align:center; padding:8px 10px;
+    border:1px solid #888; border-radius:3px; color:#111; background:#fff;
+    font-variant-numeric:tabular-nums; -moz-appearance:textfield; appearance:textfield;
+  }
+  input#outs::-webkit-outer-spin-button,
+  input#outs::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input#outs:focus{outline:none; border-color:#111}
+  .feedback{min-height:52px; text-align:center; margin-top:14px; font-size:16px; color:#333}
+  .feedback.good{color:#1a8f4c}
+  .feedback.bad{color:#c0392b}
+  .feedback .cards{color:#555; font-size:13px; margin-top:3px}
+  .feedback .cards b{color:#111}
+  button{
+    font:inherit; cursor:pointer; border:1px solid #333; border-radius:3px;
+    padding:9px 22px; background:#fff; color:#111;
+  }
+  button:hover{background:#f0f0f0}
+  .overlay{
+    position:fixed; inset:0; background:#fff; display:flex;
+    flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; padding:24px;
+  }
+  .overlay h2{margin:0; font-size:28px}
+  .overlay p{color:#555; max-width:460px; margin:0; line-height:1.5; font-size:17px}
+  .row-opts{display:flex; gap:16px; align-items:center; color:#333; font-size:16px}
+  select{font:inherit; border:1px solid #888; border-radius:3px; padding:7px 10px; background:#fff; color:#111}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <span>Score: <b id="score">0</b></span>
+    <span>Time: <b id="timer">120</b></span>
+  </div>
+
+  <div class="rows">
+    <div class="seat">
+      <div class="who">Villain</div>
+      <div class="row" id="villainCards"></div>
+    </div>
+    <div class="seat">
+      <div class="who">Board</div>
+      <div class="row" id="boardCards"></div>
+    </div>
+    <div class="seat">
+      <div class="who">You</div>
+      <div class="row" id="heroCards"></div>
+    </div>
+  </div>
+
+  <div class="prompt">Winning Outs?</div>
+  <div class="answer">
+    <input id="outs" type="number" inputmode="numeric" min="0" max="47" autocomplete="off" />
+  </div>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<div class="overlay" id="startOverlay">
+  <h2>Pokermac</h2>
+  <p>Count the number of winning outs (chop outs don't count)</p>
+  <div class="row-opts">
+    <label>Time:
+      <select id="timeSel">
+        <option value="60">60s</option>
+        <option value="120" selected>120s</option>
+        <option value="180">180s</option>
+      </select>
+    </label>
+  </div>
+  <button id="startBtn">Start</button>
+</div>
+
+<div class="overlay hidden" id="endOverlay">
+  <h2 id="endTitle">Time!</h2>
+  <p id="endStats"></p>
+  <button id="againBtn">Play again</button>
+</div>
+
+<script>
+// ---------- Deck ----------
+const RANKS = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'T',11:'J',12:'Q',13:'K',14:'A'};
+const SUITS = ['♠','♥','♦','♣']; // spade heart diamond club
+
+// Top ~40% preflop range (530/1326 combos) — matches the standard chart.
+const RANGE = new Set([
+  // pairs
+  'AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22',
+  // suited
+  'AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+  'KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','K4s','K3s','K2s',
+  'QJs','QTs','Q9s','Q8s','Q7s','Q6s','Q5s','Q4s','Q3s','Q2s',
+  'JTs','J9s','J8s','J7s',
+  'T9s','T8s','T7s',
+  '98s','97s','87s','76s',
+  // offsuit
+  'AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','A4o','A3o','A2o',
+  'KQo','KJo','KTo','K9o','K8o',
+  'QJo','QTo','Q9o',
+  'JTo','J9o','T9o',
+]);
+function handCode(a,b){
+  const hi = a.rank>=b.rank ? a : b, lo = a.rank>=b.rank ? b : a;
+  const code = RANKS[hi.rank] + RANKS[lo.rank];
+  return hi.rank===lo.rank ? code : code + (a.suit===b.suit ? 's' : 'o');
+}
+const inRange = h => RANGE.has(handCode(h[0], h[1]));
+
+function makeDeck(){
+  const d = [];
+  for(let r=2;r<=14;r++) for(let s=0;s<4;s++) d.push({rank:r, suit:s});
+  return d;
+}
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+const cardKey = c => c.rank*4 + c.suit;
+
+// ---------- 5-card evaluator -> comparable array [category, ...tiebreakers] ----------
+function eval5(cards){
+  const ranks = cards.map(c=>c.rank).sort((a,b)=>b-a);
+  const suits = cards.map(c=>c.suit);
+  const flush = suits.every(s=>s===suits[0]);
+  const counts = {};
+  for(const r of ranks) counts[r]=(counts[r]||0)+1;
+  const groups = Object.keys(counts).map(Number).sort((a,b)=> counts[b]-counts[a] || b-a);
+  const cvals = groups.map(r=>counts[r]);
+  const uniq = [...new Set(ranks)];
+  let sHigh = 0;
+  if(uniq.length===5){
+    if(ranks[0]-ranks[4]===4) sHigh = ranks[0];
+    else if(ranks[0]===14 && ranks[1]===5 && ranks[4]===2) sHigh = 5; // wheel
+  }
+  const straight = sHigh>0;
+  if(straight && flush) return [8, sHigh];
+  if(cvals[0]===4)               return [7, groups[0], groups[1]];
+  if(cvals[0]===3 && cvals[1]===2) return [6, groups[0], groups[1]];
+  if(flush)                      return [5, ...ranks];
+  if(straight)                   return [4, sHigh];
+  if(cvals[0]===3)               return [3, ...groups];         // trip, k1, k2
+  if(cvals[0]===2 && cvals[1]===2) return [2, groups[0], groups[1], groups[2]];
+  if(cvals[0]===2)               return [1, ...groups];         // pair, k1,k2,k3
+  return [0, ...ranks];
+}
+function cmp(a,b){
+  const n=Math.max(a.length,b.length);
+  for(let i=0;i<n;i++){ const x=a[i]||0, y=b[i]||0; if(x!==y) return x-y; }
+  return 0;
+}
+// best 5 out of any >=5 cards
+function bestHand(cards){
+  let best=null; const n=cards.length; const chosen=[];
+  (function pick(start){
+    if(chosen.length===5){ const s=eval5(chosen); if(!best||cmp(s,best)>0) best=s; return; }
+    for(let i=start;i<n;i++){ chosen.push(cards[i]); pick(i+1); chosen.pop(); }
+  })(0);
+  return best;
+}
+
+// Does this hand have a pair+ (using a hole card) or a real draw (flush/straight, using a hole card)?
+// Overcards-only ("pair draw") does NOT qualify.
+function qualifies(hole, board){
+  const bRanks = board.map(c=>c.rank);
+  // pair or better involving a hole card: pocket pair, or a hole card pairs the board
+  if(hole[0].rank===hole[1].rank) return true;
+  if(bRanks.includes(hole[0].rank) || bRanks.includes(hole[1].rank)) return true;
+  // flush draw (or made flush) using a hole card
+  for(let s=0;s<4;s++){
+    const cnt = [...hole,...board].filter(c=>c.suit===s).length;
+    const hc  = hole.filter(c=>c.suit===s).length;
+    if(cnt>=4 && hc>=1) return true;
+  }
+  // straight draw (or made straight) using a hole card — ace counts high and low
+  const expand = r => r===14 ? [14,1] : [r];
+  const have = new Set(), holeR = new Set();
+  for(const c of [...hole,...board]) for(const v of expand(c.rank)) have.add(v);
+  for(const c of hole)              for(const v of expand(c.rank)) holeR.add(v);
+  for(let add=1; add<=14; add++){          // the one card that would complete a straight
+    const s = new Set(have); s.add(add);
+    for(let lo=1; lo<=10; lo++){            // low end of a 5-card run
+      let run=true, usesHole=false;
+      for(let k=0;k<5;k++){
+        if(!s.has(lo+k)){ run=false; break; }
+        if(holeR.has(lo+k)) usesHole=true;
+      }
+      if(run && usesHole) return true;
+    }
+  }
+  return false;
+}
+
+// Villain must have AT LEAST TOP PAIR (meaningfully — not an underpair riding a paired board):
+// top pair / overpair, a set, a genuine two pair (both hole cards pair the board), or a
+// straight-or-better. An underpair whose only "two pair" comes from a board pair does NOT qualify.
+function villainHasTopPairPlus(hole, board){
+  const bRanks = board.map(c=>c.rank);
+  const topRank = Math.max(...bRanks);
+  const bCount = r => bRanks.filter(x=>x===r).length;
+  const [h1,h2] = hole;
+  if(h1.rank===h2.rank){
+    if(h1.rank >= topRank) return true;                 // overpair (or pocket pair of the top card)
+    if(bRanks.includes(h1.rank)) return true;           // set (pocket pair hits the board)
+  } else {
+    // top pair / overpair via a hole card that pairs (or beats) the highest board card
+    if((bRanks.includes(h1.rank) && h1.rank>=topRank) ||
+       (bRanks.includes(h2.rank) && h2.rank>=topRank)) return true;
+    // trips: a hole card matches a board card already paired on the board
+    if((bRanks.includes(h1.rank) && bCount(h1.rank)>=2) ||
+       (bRanks.includes(h2.rank) && bCount(h2.rank)>=2)) return true;
+    // genuine two pair: both hole cards pair two different board cards
+    if(bRanks.includes(h1.rank) && bRanks.includes(h2.rank) && h1.rank!==h2.rank) return true;
+  }
+  // straight / flush / full house / quads (always uses a hole card on a 4-card turn board)
+  if(bestHand([...hole,...board])[0] >= 4) return true;
+  return false;
+}
+
+// EXCLUDE spots where hero's only real draw is a low-end gutshot (bottom/"idiot" end of the
+// straight). Pair outs (overcards) don't rescue it; a flush draw or any other straight draw does.
+function heroLowEndGutshotOnly(hole, board){
+  const ex = r => r===14 ? [14,1] : [r];
+  const setVals = cards => { const s=new Set(); for(const c of cards) for(const v of ex(c.rank)) s.add(v); return s; };
+  const runsUsingHole = (vals, holeVals) => {
+    const runs=[];
+    for(let lo=1; lo<=10; lo++){
+      let ok=true, usesHole=false;
+      for(let k=0;k<5;k++){ if(!vals.has(lo+k)){ok=false;break;} if(holeVals.has(lo+k)) usesHole=true; }
+      if(ok && usesHole) runs.push(lo);
+    }
+    return runs;
+  };
+  // a flush draw (or made flush) is a real draw — keep the spot
+  for(let s=0;s<4;s++){
+    const cnt=[...hole,...board].filter(c=>c.suit===s).length;
+    if(cnt>=4 && hole.filter(c=>c.suit===s).length>=1) return false;
+  }
+  const holeVals = setVals(hole);
+  const baseVals = setVals([...hole, ...board]);
+  if(runsUsingHole(baseVals, holeVals).length) return false;   // already a made straight, not a draw
+  const completing = [];
+  for(let g=2; g<=14; g++){
+    const s = new Set(baseVals); for(const v of ex(g)) s.add(v);
+    const runs = runsUsingHole(s, holeVals).filter(lo => ex(g).some(v => v>=lo && v<=lo+4));
+    if(runs.length) completing.push(Math.max(...runs.map(lo=>lo+4)));  // top card of the completed straight
+  }
+  if(completing.length !== 1) return false;   // 0 = no straight draw, >=2 = open-ended (real draw)
+  return !holeVals.has(completing[0]);         // hero doesn't hold the top card => low end => EXCLUDE
+}
+
+// ---------- Optional outs-distribution skew ----------
+// Measured natural frequency (%) of hero's out count under the current constraints.
+const NAT_OUTS = {4:13.9,5:24,6:3.9,7:9.8,8:13.5,9:7,10:5.3,11:8.4,12:4.5,13:2.8,14:4.2,15:1.3,16:0.5,17:0.6,18:0.2,19:0.1,20:0.1};
+// Target relative weights by out count (null = leave the natural distribution alone).
+const OUTS_TARGETS = {
+  high: o => (o>=4 && o<=14) ? o : 0,          // rising weight — lean toward bigger draws
+};
+let outsSkew = null; // {fn, maxRatio} or null
+function setOutsSkew(name){
+  const fn = OUTS_TARGETS[name];
+  if(!fn){ outsSkew = null; return; }
+  let mx = 0;
+  for(const k in NAT_OUTS){ const r = fn(+k)/NAT_OUTS[k]; if(r>mx) mx=r; }
+  outsSkew = {fn, maxRatio: mx || 1};
+}
+// accept a spot with prob ∝ target(o)/natural(o), normalized so the peak accept-rate is 1
+function acceptByOuts(o){
+  if(!outsSkew) return true;
+  const w = outsSkew.fn(o);
+  if(w<=0) return false;
+  const nat = NAT_OUTS[o] || 0.3;              // assume rare tail counts are ~0.3%
+  return Math.random() < (w/nat)/outsSkew.maxRatio;
+}
+
+// ---------- Problem generation ----------
+function generate(){
+  let fallback = null;                         // a valid spot to fall back on if skew rejects everything
+  for(let attempt=0; attempt<8000; attempt++){
+    const deck = shuffle(makeDeck());
+    const hero = deck.slice(0,2);
+    const vill = deck.slice(2,4);
+    if(!inRange(hero) || !inRange(vill)) continue;   // both from top-40% range
+    const board = deck.slice(4,8);            // turn = 4 cards
+    if(!qualifies(hero,board)) continue;              // hero needs a pair+ or a real draw
+    if(heroLowEndGutshotOnly(hero,board)) continue;   // drop pure low-end-gutshot spots
+    if(!villainHasTopPairPlus(vill,board)) continue; // villain needs at least top pair
+    const used = new Set([...hero,...vill,...board].map(cardKey));
+    const remaining = deck.filter(c=>!used.has(cardKey(c)));
+
+    const heroNow = bestHand([...hero,...board]);
+    const villNow = bestHand([...vill,...board]);
+    if(cmp(villNow, heroNow) <= 0) continue;  // require hero currently behind
+
+    const outCards = [];
+    for(const r of remaining){
+      const h = bestHand([...hero,...board,r]);
+      const v = bestHand([...vill,...board,r]);
+      if(cmp(h,v) > 0) outCards.push(r);       // strictly wins
+    }
+    if(outCards.length < 4) continue;           // hero must have at least 4 outs
+    const spot = {hero, vill, board, outs:outCards.length, outCards};
+    fallback = spot;                            // keep the most recent valid spot
+    if(acceptByOuts(outCards.length)) return spot;
+  }
+  return fallback; // exhausted attempts — skew is best-effort, return last valid spot
+}
+
+// ---------- Rendering ----------
+function cardEl(c){
+  const el = document.createElement('div');
+  el.className = 'card s' + c.suit;
+  el.innerHTML = `<span class="corner"><span class="cr">${RANKS[c.rank]}</span></span>`
+    + `<span class="pip">${SUITS[c.suit]}</span>`;
+  return el;
+}
+function slotEl(){
+  const el = document.createElement('div');
+  el.className = 'card slot';
+  el.textContent = 'river';
+  return el;
+}
+function renderRow(id, cards, withSlot){
+  const row = document.getElementById(id);
+  row.innerHTML='';
+  cards.forEach(c=>row.appendChild(cardEl(c)));
+  if(withSlot) row.appendChild(slotEl());
+}
+function cardStr(c){ return RANKS[c.rank]+SUITS[c.suit]; }
+
+// ---------- Game loop ----------
+let state = {score:0, correct:0, attempts:0, time:120, timer:null, current:null, locked:false};
+
+function newProblem(){
+  state.current = generate();
+  renderRow('heroCards', state.current.hero, false);
+  renderRow('villainCards', state.current.vill, false);
+  renderRow('boardCards', state.current.board, true);
+  const inp = document.getElementById('outs');
+  inp.value=''; inp.focus();
+  document.getElementById('feedback').textContent='';
+  document.getElementById('feedback').className='feedback';
+  state.locked=false;
+}
+
+function checkInput(){
+  if(state.locked || !state.current) return;
+  const inp = document.getElementById('outs');
+  if(inp.value==='') return;
+  if(parseInt(inp.value,10) === state.current.outs){
+    state.score++; state.correct++; state.attempts++;
+    document.getElementById('score').textContent = state.score;
+    newProblem();
+  }
+}
+function tick(){
+  state.time--;
+  document.getElementById('timer').textContent = state.time;
+  if(state.time<=0){ endGame(); }
+}
+function startGame(){
+  state.score=0; state.correct=0; state.attempts=0;
+  state.time = parseInt(document.getElementById('timeSel').value,10);
+  setOutsSkew('high');   // lean toward draws with more outs
+  document.getElementById('score').textContent='0';
+  document.getElementById('timer').textContent=state.time;
+  document.getElementById('startOverlay').classList.add('hidden');
+  document.getElementById('endOverlay').classList.add('hidden');
+  newProblem();
+  clearInterval(state.timer);
+  state.timer = setInterval(tick, 1000);
+}
+function endGame(){
+  clearInterval(state.timer);
+  state.locked=true;
+  document.getElementById('endStats').innerHTML = `Score: <b>${state.score}</b>`;
+  document.getElementById('endOverlay').classList.remove('hidden');
+}
+
+// ---------- Wiring ----------
+document.getElementById('outs').addEventListener('input', checkInput);
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('againBtn').addEventListener('click', startGame);
+</script>
+</body>
+</html>
