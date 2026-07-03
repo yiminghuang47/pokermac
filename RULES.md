@@ -33,7 +33,7 @@ The spec for the outs-counting drill, as decided so far. (App entry point: `inde
 - **Time:** 60 / 120 / 180 seconds (the only user-facing setting).
 
 ## Outs distribution
-- The generator **leans toward bigger draws.** Via acceptance sampling on top of the normal generator (poker constraints above are never violated), each out-count is weighted **∝ its size over 4–14**, so flush draws / open-enders / combo draws dominate and thin 4-out spots are rarer. Mean ≈ 10 outs. This is fixed — there's no distribution selector.
+- The generator **leans toward bigger draws.** Via acceptance sampling on top of the normal generator (poker constraints above are never violated), each out-count is weighted **∝ its size**, so flush draws / open-enders / combo draws dominate and thin 4-out spots are rarer. The 4–14 band is reshaped upward; **15+ out spots (big combo draws) are NOT excluded** — they appear at roughly their natural frequency (~12% of spots are >14 outs). Mean ≈ 10.8 outs. This is fixed — there's no distribution selector.
 
 ## Presentation
 - **4-color deck:** spades = black, hearts = red, diamonds = blue, clubs = green.
