@@ -97,6 +97,17 @@ function startSolo(){
   beginGame(parseInt($('timeSel').value, 10));
 }
 
+// Leave a multiplayer room from the lobby and start a solo game instead.
+function leaveRoomToSolo(){
+  if(state.room){ state.room.leave(); state.room = null; }
+  players = [];
+  history.replaceState(null, '', location.pathname);   // drop ?room= so a reload won't rejoin
+  state.mode = 'solo';
+  state.rng = Math.random;
+  setOutsSkew('high');
+  beginGame(parseInt($('lobbyTimeSel').value, 10));     // respect the time picked in the lobby
+}
+
 // ---------- Multiplayer ----------
 function sortedByScore(list){
   return [...list].sort((a,b) => b.score - a.score || a.name.localeCompare(b.name));
@@ -235,6 +246,7 @@ $('playAgainBtn').addEventListener('click', () => {
   state.room.resetForRematch();
   enterLobby();
 });
+$('lobbySoloBtn').addEventListener('click', leaveRoomToSolo);
 
 // ---------- Boot: solo start, or join flow if arriving via ?room= ----------
 const roomParam = new URLSearchParams(location.search).get('room');

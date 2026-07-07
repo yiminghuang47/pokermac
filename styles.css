@@ -60,6 +60,8 @@ input[type=text]:focus{outline:none; border-color:#fff}
 
 /* ---- multiplayer ---- */
 .divider{color:#5a6472; font-size:14px; margin:2px 0}
+button.link-btn{background:none; border:none; color:#7f8794; padding:4px 8px; font-size:14px; text-decoration:underline}
+button.link-btn:hover{background:none; color:#c7cdd8}
 button.on{background:#173a26; border-color:#3ddc84; color:#3ddc84}
 .roomcode, #roomCodeLabel{font-variant-numeric:tabular-nums; letter-spacing:2px; color:#fff}
 .lobby-status{min-height:24px; color:#9aa2b1; font-size:15px; text-align:center}
