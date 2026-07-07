@@ -54,4 +54,33 @@ button:hover{background:#1f2634}
 .overlay p{color:#9aa2b1; max-width:460px; margin:0; line-height:1.5; font-size:17px}
 .row-opts{display:flex; gap:16px; align-items:center; color:#c7cdd8; font-size:16px}
 select{font:inherit; border:1px solid #3a4150; border-radius:3px; padding:7px 10px; background:#161b26; color:#e8eaed}
+input[type=text]{font:inherit; border:1px solid #3a4150; border-radius:3px; padding:7px 10px; background:#161b26; color:#fff; width:160px}
+input[type=text]:focus{outline:none; border-color:#fff}
 .hidden{display:none !important}
+
+/* ---- multiplayer ---- */
+.divider{color:#5a6472; font-size:14px; margin:2px 0}
+button.on{background:#173a26; border-color:#3ddc84; color:#3ddc84}
+.roomcode, #roomCodeLabel{font-variant-numeric:tabular-nums; letter-spacing:2px; color:#fff}
+.lobby-status{min-height:24px; color:#9aa2b1; font-size:15px; text-align:center}
+
+.player-list{
+  display:flex; flex-direction:column; gap:6px; width:100%; max-width:340px;
+  border:1px solid #2a2f3a; border-radius:6px; padding:10px; background:#0f131c;
+}
+.player-row{display:flex; align-items:center; gap:10px; font-size:16px}
+.player-row .pname{flex:1; text-align:left; color:#e8eaed; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.player-row .pscore{font-variant-numeric:tabular-nums; font-weight:700; color:#fff; min-width:28px; text-align:right}
+.host-badge{font-size:11px; color:#7f8794; border:1px solid #3a4150; border-radius:3px; padding:0 4px; margin-left:4px}
+.tag{font-size:12px; color:#7f8794; min-width:56px; text-align:right}
+.tag.ok{color:#3ddc84}
+
+.countdown{font-size:120px; font-weight:800; color:#fff; line-height:1}
+
+.live-scores{
+  display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:center;
+  margin-top:22px; padding-top:14px; border-top:1px solid #2a2f3a;
+  font-size:14px; color:#9aa2b1;
+}
+.live-scores .ls-item b{color:#fff; font-weight:600}
+.live-scores .ls-item{font-variant-numeric:tabular-nums}
