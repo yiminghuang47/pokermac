@@ -8,60 +8,59 @@
   *{box-sizing:border-box}
   body{
     margin:0; font:17px/1.45 Arial, Helvetica, sans-serif;
-    background:#fff; color:#111; display:flex; flex-direction:column;
+    background:#0b0e14; color:#e8eaed; display:flex; flex-direction:column;
     align-items:center; min-height:100vh;
   }
   #app{width:100%; max-width:640px; padding:20px}
   .topbar{
     display:flex; justify-content:space-between; align-items:baseline;
-    border-bottom:1px solid #ccc; padding-bottom:10px; margin-bottom:36px;
-    font-size:17px; color:#444;
+    border-bottom:1px solid #2a2f3a; padding-bottom:10px; margin-bottom:36px;
+    font-size:17px; color:#9aa2b1;
   }
-  .topbar b{font-size:24px; color:#111; font-variant-numeric:tabular-nums}
+  .topbar b{font-size:24px; color:#fff; font-variant-numeric:tabular-nums}
   .rows{display:flex; flex-direction:column; gap:20px; align-items:center}
   .seat{display:flex; flex-direction:column; align-items:center; gap:6px}
-  .seat .who{font-size:14px; color:#888}
+  .seat .who{font-size:14px; color:#7f8794}
   .row{display:flex; gap:8px}
+  /* solid color-block cards, colored by suit, big white rank */
   .card{
-    width:58px; height:80px; background:#fff; border:1px solid #bbb; border-radius:5px;
-    display:flex; align-items:center; justify-content:center; position:relative;
-    font-weight:700; line-height:1;
+    width:58px; height:80px; border-radius:5px; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:44px; font-weight:800; line-height:1;
   }
-  .card .corner{position:absolute; top:4px; left:5px; font-size:17px; font-weight:700}
-  .card .pip{font-size:38px; line-height:1}
-  .card.s0{color:#111}    /* spades black */
-  .card.s1{color:#d1364a} /* hearts red */
-  .card.s2{color:#2b7fff} /* diamonds blue */
-  .card.s3{color:#1a9e5a} /* clubs green */
-  .card.slot{border:1px dashed #ccc; color:#bbb; font-size:13px; font-weight:400}
-  .prompt{margin:34px 0 12px; text-align:center; font-size:20px; color:#333}
+  .card.s0{background:#5b6472} /* spades gray */
+  .card.s1{background:#c81e3c} /* hearts red */
+  .card.s2{background:#3a44c4} /* diamonds blue */
+  .card.s3{background:#1a7f47} /* clubs green */
+  .card.slot{background:transparent; border:2px dashed #333b48; color:#5a6472; font-size:13px; font-weight:400}
+  .prompt{margin:34px 0 12px; text-align:center; font-size:20px; color:#c7cdd8}
   .answer{display:flex; gap:10px; justify-content:center; align-items:center}
   input#outs{
     width:110px; font:inherit; font-size:28px; text-align:center; padding:8px 10px;
-    border:1px solid #888; border-radius:3px; color:#111; background:#fff;
+    border:1px solid #3a4150; border-radius:3px; color:#fff; background:#161b26;
     font-variant-numeric:tabular-nums; -moz-appearance:textfield; appearance:textfield;
   }
   input#outs::-webkit-outer-spin-button,
   input#outs::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
-  input#outs:focus{outline:none; border-color:#111}
-  .feedback{min-height:52px; text-align:center; margin-top:14px; font-size:16px; color:#333}
-  .feedback.good{color:#1a8f4c}
-  .feedback.bad{color:#c0392b}
-  .feedback .cards{color:#555; font-size:13px; margin-top:3px}
-  .feedback .cards b{color:#111}
+  input#outs:focus{outline:none; border-color:#fff}
+  .feedback{min-height:52px; text-align:center; margin-top:14px; font-size:16px; color:#c7cdd8}
+  .feedback.good{color:#3ddc84}
+  .feedback.bad{color:#ff6b6b}
+  .feedback .cards{color:#9aa2b1; font-size:13px; margin-top:3px}
+  .feedback .cards b{color:#fff}
   button{
-    font:inherit; cursor:pointer; border:1px solid #333; border-radius:3px;
-    padding:9px 22px; background:#fff; color:#111;
+    font:inherit; cursor:pointer; border:1px solid #3a4150; border-radius:3px;
+    padding:9px 22px; background:#161b26; color:#e8eaed;
   }
-  button:hover{background:#f0f0f0}
+  button:hover{background:#1f2634}
   .overlay{
-    position:fixed; inset:0; background:#fff; display:flex;
+    position:fixed; inset:0; background:#0b0e14; display:flex;
     flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; padding:24px;
   }
-  .overlay h2{margin:0; font-size:28px}
-  .overlay p{color:#555; max-width:460px; margin:0; line-height:1.5; font-size:17px}
-  .row-opts{display:flex; gap:16px; align-items:center; color:#333; font-size:16px}
-  select{font:inherit; border:1px solid #888; border-radius:3px; padding:7px 10px; background:#fff; color:#111}
+  .overlay h2{margin:0; font-size:28px; color:#fff}
+  .overlay p{color:#9aa2b1; max-width:460px; margin:0; line-height:1.5; font-size:17px}
+  .row-opts{display:flex; gap:16px; align-items:center; color:#c7cdd8; font-size:16px}
+  select{font:inherit; border:1px solid #3a4150; border-radius:3px; padding:7px 10px; background:#161b26; color:#e8eaed}
   .hidden{display:none !important}
 </style>
 </head>
@@ -349,8 +348,7 @@ function generate(){
 function cardEl(c){
   const el = document.createElement('div');
   el.className = 'card s' + c.suit;
-  el.innerHTML = `<span class="corner"><span class="cr">${RANKS[c.rank]}</span></span>`
-    + `<span class="pip">${SUITS[c.suit]}</span>`;
+  el.textContent = RANKS[c.rank];
   return el;
 }
 function slotEl(){
