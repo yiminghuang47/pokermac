@@ -1,7 +1,9 @@
 // ---------- Realtime game room (Supabase) ----------
-// A room is a Realtime channel. Presence tracks each player's live state
-// {id,name,ready,score,finished,isHost,time}; Broadcast carries the host's
-// synchronized `start` event (with the shared seed + time). No DB table needed.
+// A room is a Realtime channel. We use PRESENCE only for membership (join/leave)
+// and drive all mutable state — name, ready, score, finished — over BROADCAST,
+// keeping a local roster keyed by player id. (Presence *updates* proved unreliable
+// to propagate to already-subscribed peers; broadcast is rock-solid.) The host is
+// the single source of the synchronized `start` event (with the shared seed + time).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
@@ -21,47 +23,66 @@ const MIN_PLAYERS = 2;
 function connect({ code, name, isHost, time, onState, onStart }){
   const id = uid();
   const self = { id, name, ready:false, score:0, finished:false, isHost, time: time || 120 };
+  const roster = new Map([[id, self]]);   // id -> player state, incl. self
   let started = false;
 
   const channel = supabase.channel('room:' + code, {
-    config: { presence: { key: id }, broadcast: { self: true } },
+    config: { broadcast: { self: true }, presence: { key: id } },
   });
 
-  function players(){
-    const state = channel.presenceState();
-    const list = [];
-    for(const k in state){ const metas = state[k]; if(metas && metas[0]) list.push(metas[0]); }
-    return list;
-  }
-  const track = () => channel.track(self);
+  const emit = () => onState([...roster.values()]);
+  const broadcastSelf = () => channel.send({ type: 'broadcast', event: 'state', payload: { ...self } });
 
-  channel.on('presence', { event: 'sync' }, () => {
-    const list = players();
-    onState(list);
-    // Host is the single source of the start signal: fire once when everyone's ready.
-    if(isHost && !started && list.length >= MIN_PLAYERS && list.every(p => p.ready)){
+  // Host fires the start exactly once, when everyone present is ready.
+  function maybeStart(){
+    if(!isHost || started) return;
+    const list = [...roster.values()];
+    if(list.length >= MIN_PLAYERS && list.every(p => p.ready)){
       started = true;
       const seed = uid() + uid();
       channel.send({ type: 'broadcast', event: 'start', payload: { seed, time: self.time } });
     }
+  }
+
+  channel.on('broadcast', { event: 'state' }, ({ payload }) => {
+    roster.set(payload.id, payload);
+    emit();
+    maybeStart();
   });
   channel.on('broadcast', { event: 'start' }, ({ payload }) => onStart(payload));
+  // Someone new joined — (re)announce myself so their roster learns about me.
+  channel.on('presence', { event: 'join' }, () => { broadcastSelf(); });
+  channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
+    for(const p of leftPresences){ if(p.id) roster.delete(p.id); }
+    emit();
+  });
+
+  // Mutate self, reflect locally, then announce to the room.
+  const update = (patch) => {
+    Object.assign(self, patch);
+    roster.set(id, self);
+    emit();
+    return broadcastSelf().then(maybeStart);
+  };
 
   const ctrl = {
     code, id, isHost,
-    setReady(v){ self.ready = v; return track(); },
-    setTime(t){ self.time = t; return track(); },
-    setName(n){ self.name = n; return track(); },
-    updateScore(n){ self.score = n; return track(); },
-    finish(n){ self.score = n; self.finished = true; return track(); },
-    resetForRematch(){ self.ready = false; self.score = 0; self.finished = false; started = false; return track(); },
+    setReady(v){ return update({ ready: v }); },
+    setTime(t){ self.time = t; return Promise.resolve(); },   // host-only; sent in the start payload
+    setName(n){ return update({ name: n }); },
+    updateScore(n){ return update({ score: n }); },
+    finish(n){ return update({ score: n, finished: true }); },
+    resetForRematch(){ started = false; return update({ ready:false, score:0, finished:false }); },
     leave(){ channel.unsubscribe(); supabase.removeChannel(channel); },
   };
 
   return new Promise((resolve, reject) => {
     channel.subscribe(async (status) => {
-      if(status === 'SUBSCRIBED'){ await track(); resolve(ctrl); }
-      else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){
+      if(status === 'SUBSCRIBED'){
+        await channel.track({ id });   // presence carries only membership
+        await broadcastSelf();
+        resolve(ctrl);
+      } else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){
         reject(new Error('Realtime connection failed (' + status + ')'));
       }
     });
