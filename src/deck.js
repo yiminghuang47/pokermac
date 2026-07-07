@@ -31,8 +31,8 @@ export function makeDeck(){
   for(let r=2;r<=14;r++) for(let s=0;s<4;s++) d.push({rank:r, suit:s});
   return d;
 }
-export function shuffle(a){
-  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+export function shuffle(a, rng = Math.random){
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
   return a;
 }
 export const cardKey = c => c.rank*4 + c.suit;

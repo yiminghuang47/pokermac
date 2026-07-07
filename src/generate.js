@@ -21,18 +21,19 @@ export function setOutsSkew(name){
   outsSkew = {fn, maxRatio: mx || 1};
 }
 // accept a spot with prob ∝ target(o)/natural(o), normalized so the peak accept-rate is 1
-function acceptByOuts(o){
+function acceptByOuts(o, rng){
   if(!outsSkew) return true;
   const w = outsSkew.fn(o);
   if(w<=0) return false;
   const nat = NAT_OUTS[o] || 0.3;              // assume rare tail counts are ~0.3%
-  return Math.random() < (w/nat)/outsSkew.maxRatio;
+  return rng() < (w/nat)/outsSkew.maxRatio;
 }
 
-export function generate(){
+// rng defaults to Math.random (solo); a seeded rng makes the whole sequence reproducible.
+export function generate(rng = Math.random){
   let fallback = null;                         // a valid spot to fall back on if skew rejects everything
   for(let attempt=0; attempt<8000; attempt++){
-    const deck = shuffle(makeDeck());
+    const deck = shuffle(makeDeck(), rng);
     const hero = deck.slice(0,2);
     const vill = deck.slice(2,4);
     if(!inRange(hero) || !inRange(vill)) continue;   // both from top-40% range
@@ -56,7 +57,7 @@ export function generate(){
     if(outCards.length < 4) continue;           // hero must have at least 4 outs
     const spot = {hero, vill, board, outs:outCards.length, outCards};
     fallback = spot;                            // keep the most recent valid spot
-    if(acceptByOuts(outCards.length)) return spot;
+    if(acceptByOuts(outCards.length, rng)) return spot;
   }
   return fallback; // exhausted attempts — skew is best-effort, return last valid spot
 }

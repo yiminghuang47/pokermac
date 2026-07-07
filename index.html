@@ -33,8 +33,11 @@
     <input id="outs" type="number" inputmode="numeric" min="0" max="47" autocomplete="off" />
   </div>
   <div class="feedback" id="feedback"></div>
+
+  <div class="live-scores hidden" id="liveScores"></div>
 </div>
 
+<!-- Solo start / create a room -->
 <div class="overlay" id="startOverlay">
   <h2>pokermac</h2>
   <p>Count the number of winning outs (chop outs don't count)</p>
@@ -47,13 +50,59 @@
       </select>
     </label>
   </div>
-  <button id="startBtn">Start</button>
+  <button id="startBtn">Start solo</button>
+  <div class="divider">— or —</div>
+  <div class="row-opts">
+    <label>Name: <input id="nameInput" type="text" maxlength="16" autocomplete="off" placeholder="you" /></label>
+  </div>
+  <button id="createBtn">Challenge friends</button>
 </div>
 
+<!-- Landed via ?room= link -->
+<div class="overlay hidden" id="joinOverlay">
+  <h2>You've been challenged!</h2>
+  <p>Join room <b id="joinCode"></b> and count outs faster than your friends.</p>
+  <div class="row-opts">
+    <label>Name: <input id="joinName" type="text" maxlength="16" autocomplete="off" placeholder="you" /></label>
+  </div>
+  <button id="joinBtn">Join room</button>
+</div>
+
+<!-- Lobby: wait for players, ready up -->
+<div class="overlay hidden" id="lobbyOverlay">
+  <h2>Room <span id="roomCodeLabel"></span></h2>
+  <button id="copyLinkBtn">Copy invite link</button>
+  <div class="player-list" id="lobbyPlayers"></div>
+  <div class="row-opts hidden" id="hostTimeWrap">
+    <label>Time:
+      <select id="lobbyTimeSel">
+        <option value="60">60s</option>
+        <option value="120" selected>120s</option>
+        <option value="180">180s</option>
+      </select>
+    </label>
+  </div>
+  <div class="lobby-status" id="lobbyStatus"></div>
+  <button id="readyBtn">Ready</button>
+</div>
+
+<!-- 3-2-1 synchronized start -->
+<div class="overlay hidden" id="countdownOverlay">
+  <div class="countdown" id="countdownNum">3</div>
+</div>
+
+<!-- Solo end screen -->
 <div class="overlay hidden" id="endOverlay">
   <h2 id="endTitle">Time!</h2>
   <p id="endStats"></p>
   <button id="againBtn">Play again</button>
+</div>
+
+<!-- Multiplayer results -->
+<div class="overlay hidden" id="resultsOverlay">
+  <h2>Results</h2>
+  <div class="player-list" id="resultsPlayers"></div>
+  <button id="playAgainBtn">Back to lobby</button>
 </div>
 
 <script type="module" src="src/main.js"></script>
