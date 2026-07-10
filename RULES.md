@@ -10,7 +10,7 @@ The spec for the outs-counting drill, as decided so far. (App entry point: `inde
 ## What counts as an out
 - An out is a river card that gives hero a **strictly winning** hand.
 - A card that produces a **tie does NOT count**.
-- **Hero always has at least 4 outs** — thin (0–3 out) spots are never generated.
+- **Hero always has at least 1 out** — only drawing-dead (0-out) spots are never generated. Thin 1–4 out spots do occur, but are rare (the outs skew below leans toward bigger draws).
 - **Pure low-end-gutshot spots are excluded.** If hero's only real draw is a gutshot to the *bottom* ("idiot") end of the straight — hero doesn't hold the top card of the completed straight — the spot is dropped. Pair outs (overcards) do **not** rescue it; a flush draw, an open-ended draw, or a high/nut-end gutshot does. ("Low end" = hero doesn't hold the top card of the straight it's drawing to.)
 - Outs are computed exactly with a real best-5-of-7 evaluator (accounts for the card *also* helping villain — e.g. a flush card that pairs the board and gives villain a full house is not an out).
 
@@ -33,7 +33,7 @@ The spec for the outs-counting drill, as decided so far. (App entry point: `inde
 - **Time:** 60 / 120 / 180 seconds (the only user-facing setting).
 
 ## Outs distribution
-- The generator **leans toward bigger draws.** Via acceptance sampling on top of the normal generator (poker constraints above are never violated), each out-count is weighted **∝ its size**, so flush draws / open-enders / combo draws dominate and thin 4-out spots are rarer. The 4–14 band is reshaped upward; **15+ out spots (big combo draws) are NOT excluded** — they appear at roughly their natural frequency (~12% of spots are >14 outs). Mean ≈ 10.8 outs. This is fixed — there's no distribution selector.
+- The generator **leans toward bigger draws.** Via acceptance sampling on top of the normal generator (poker constraints above are never violated), each out-count is weighted **∝ its size**, so flush draws / open-enders / combo draws dominate and thin low-out spots are rare. Naturally-common small draws (2-out spots are ~26% of raw spots) are suppressed hard: after the skew, 1–4 out spots are only ~1–3% each. **15+ out spots (big combo draws) are NOT excluded** — they appear at roughly their natural frequency. Mean ≈ 10.4 outs. This is fixed — there's no distribution selector.
 
 ## Presentation
 - **4-color deck:** spades = black, hearts = red, diamonds = blue, clubs = green.

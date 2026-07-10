@@ -4,11 +4,13 @@ import { bestHand, cmp } from './evaluator.js';
 import { qualifies, villainHasTopPairPlus, heroLowEndGutshotOnly } from './rules.js';
 
 // ---------- Optional outs-distribution skew ----------
-// Measured natural frequency (%) of hero's out count under the current constraints.
-const NAT_OUTS = {4:13.9,5:24,6:3.9,7:9.8,8:13.5,9:7,10:5.3,11:8.4,12:4.5,13:2.8,14:4.2,15:1.3,16:0.5,17:0.6,18:0.2,19:0.1,20:0.1};
+// Measured natural frequency (%) of hero's out count under the current constraints
+// (min 1 out; sampled ~40k spots). Low counts are common — 2-out alone is ~26% —
+// so the skew below leans hard on them to favour bigger draws.
+const NAT_OUTS = {1:1.6,2:25.7,3:8.5,4:9.6,5:15.1,6:2.5,7:6,8:8.2,9:4.8,10:3.6,11:5.3,12:2.7,13:1.8,14:2.5,15:1,16:0.4,17:0.4,18:0.1,19:0.1,20:0.1};
 // Target relative weights by out count (null = leave the natural distribution alone).
 const OUTS_TARGETS = {
-  high: o => (o>=4) ? o : 0,                   // rising weight — lean toward bigger draws (no upper cap)
+  high: o => (o>=1) ? o : 0,                   // rising weight — lean toward bigger draws; 0-out spots excluded
 };
 let outsSkew = null; // {fn, maxRatio} or null
 export function setOutsSkew(name){
@@ -54,7 +56,7 @@ export function generate(rng = Math.random){
       const v = bestHand([...vill,...board,r]);
       if(cmp(h,v) > 0) outCards.push(r);       // strictly wins
     }
-    if(outCards.length < 4) continue;           // hero must have at least 4 outs
+    if(outCards.length < 1) continue;           // hero needs at least 1 out — no drawing-dead (0-out) spots
     const spot = {hero, vill, board, outs:outCards.length, outCards};
     fallback = spot;                            // keep the most recent valid spot
     if(acceptByOuts(outCards.length, rng)) return spot;
